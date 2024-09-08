@@ -5,11 +5,11 @@ use ratatui::{
     layout::{Alignment, Rect},
     style::Stylize,
     symbols::border,
-    text::{Line, Text},
+    text::Line,
     widgets::{
         block::{Position, Title},
         canvas::*,
-        Block, Paragraph, Widget,
+        Block, Widget,
     },
     Frame,
 };
@@ -18,10 +18,7 @@ use ratatui::{
 const ZOOM_STEP_SIZE: i32 = 2;
 const PAN_STEP_SIZE: i32 = 1;
 
-use color_eyre::{
-    eyre::{bail, WrapErr},
-    Result,
-};
+use color_eyre::{eyre::WrapErr, Result};
 
 mod tui;
 
@@ -70,6 +67,8 @@ impl Viewport {
 pub struct App {
     exit: bool,
     viewport: Viewport,
+    /// last seen mouse clicking position
+    last_mouse_drag_position: Option<(u16, u16)>,
 }
 
 impl App {
@@ -90,12 +89,9 @@ impl App {
             Event::Key(key_event) if key_event.kind == KeyEventKind::Press => self
                 .handle_key_event(key_event)
                 .wrap_err_with(|| format!("handling key event failed: \n{key_event:#?}")),
-            Event::Mouse(mouse_event)
-                if mouse_event.kind == MouseEventKind::Drag(MouseButton::Left) =>
-            {
-                self.handle_mouse_event(mouse_event)
-                    .wrap_err_with(|| format!("handling mouse event failed: \n{mouse_event:#?}"))
-            }
+            Event::Mouse(mouse_event) => self
+                .handle_mouse_event(mouse_event)
+                .wrap_err_with(|| format!("handling mouse event failed: \n{mouse_event:#?}")),
 
             _ => Ok(()),
         }
@@ -117,9 +113,25 @@ impl App {
 
     fn handle_mouse_event(&mut self, mouse_event: MouseEvent) -> Result<()> {
         match mouse_event.kind {
-            // MouseEventKind::Drag(MouseButton::Left) => self.pan()?,
-            MouseEventKind::ScrollDown => self.decrement_zoom()?,
+            MouseEventKind::Drag(MouseButton::Left) => {
+                if let Some((column, row)) = &self.last_mouse_drag_position {
+                    let vertical_delta =
+                        f64::from(i32::from(mouse_event.row).wrapping_sub(i32::from(*row))) * 0.2;
+                    let horizontal_delta =
+                        f64::from(i32::from(mouse_event.column).wrapping_sub(i32::from(*column)))
+                            * 0.2;
+                    self.viewport.max_x -= horizontal_delta;
+                    self.viewport.min_x -= horizontal_delta;
+                    self.viewport.max_y += vertical_delta;
+                    self.viewport.min_y += vertical_delta;
+                }
+                self.last_mouse_drag_position = Some((mouse_event.column, mouse_event.row));
+            }
+            MouseEventKind::Up(_) => {  // Dragging finishes
+                self.last_mouse_drag_position = None;
+            }
             MouseEventKind::ScrollUp => self.increment_zoom()?,
+            MouseEventKind::ScrollDown => self.decrement_zoom()?,
             _ => {}
         }
         Ok(())
@@ -169,6 +181,8 @@ impl Widget for &App {
             "<Up>".blue().bold(),
             " Zoom Out ".into(),
             "<Down>".blue().bold(),
+            " Pan around ".into(),
+            "<w,a,s,d>".blue().bold(),
             " Quit ".into(),
             "<Q> ".blue().bold(),
         ]));
