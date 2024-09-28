@@ -1,4 +1,5 @@
 use crossterm::event::{MouseButton, MouseEvent, MouseEventKind};
+use map::WorldMap;
 use ratatui::{
     buffer::Buffer,
     crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind},
@@ -20,6 +21,7 @@ const PAN_STEP_SIZE: i32 = 1;
 
 use color_eyre::{eyre::WrapErr, Result};
 
+mod map;
 mod tui;
 
 fn main() -> Result<()> {
@@ -127,7 +129,8 @@ impl App {
                 }
                 self.last_mouse_drag_position = Some((mouse_event.column, mouse_event.row));
             }
-            MouseEventKind::Up(_) => {  // Dragging finishes
+            MouseEventKind::Up(_) => {
+                // Dragging finishes
                 self.last_mouse_drag_position = None;
             }
             MouseEventKind::ScrollUp => self.increment_zoom()?,
@@ -200,9 +203,9 @@ impl Widget for &App {
             .x_bounds([self.viewport.min_x, self.viewport.max_x])
             .y_bounds([self.viewport.min_y, self.viewport.max_y])
             .paint(|ctx| {
-                ctx.draw(&Map {
-                    resolution: ratatui::widgets::canvas::MapResolution::High,
-                    color: ratatui::style::Color::Yellow,
+                ctx.draw(&WorldMap {
+                    resolution: map::WorldResolution::High,
+                    color: ratatui::style::Color::Blue,
                 });
                 ctx.layer()
             });
