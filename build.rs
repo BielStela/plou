@@ -4,6 +4,7 @@ use std::io::{self, BufRead};
 use std::path::Path;
 
 fn main() -> io::Result<()> {
+    println!("cargo::rerun-if-env-changed=WORLD_SRC");
     let path = env::var("WORLD_SRC").unwrap_or_else(|_| "./data/world_10.txt".to_string());
     let input_file_path = Path::new(path.as_str());
     let file = File::open(&input_file_path).expect(format!("File not found").as_str());

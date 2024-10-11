@@ -1,6 +1,6 @@
 include!(concat!(env!("OUT_DIR"), "/coordinates.rs"));
 
-use std::default;
+
 use ratatui::style::Color;
 use ratatui::widgets::canvas::{Painter, Shape};
 

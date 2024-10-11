@@ -16,8 +16,8 @@ use ratatui::{
 };
 
 // How many map units are moved per step of zoom
-const ZOOM_STEP_SIZE: i32 = 2;
-const PAN_STEP_SIZE: i32 = 1;
+const ZOOM_STEP_SIZE: f64 = 0.2;
+const PAN_STEP_SIZE: i32 = 100;
 
 use color_eyre::{eyre::WrapErr, Result};
 
@@ -43,25 +43,32 @@ struct Viewport {
     max_x: f64,
     min_y: f64,
     max_y: f64,
+    zoom_level: f64,
 }
 
 impl Default for Viewport {
     fn default() -> Self {
         Self {
             min_x: -180.,
+            // min_x: 0.,
             max_x: 180.,
+            // max_x: 100.,
             min_y: -90.,
+            // min_y: 0.,
             max_y: 90.,
+            // max_y: 100.,
+            zoom_level: 0.,
         }
     }
 }
 
 impl Viewport {
     fn zoom(&mut self, z: i32) {
-        self.min_x += (z * ZOOM_STEP_SIZE) as f64;
-        self.min_y += (z * ZOOM_STEP_SIZE / 2) as f64;
-        self.max_x -= (z * ZOOM_STEP_SIZE) as f64;
-        self.max_y -= (z * ZOOM_STEP_SIZE / 2) as f64;
+        self.zoom_level += f64::from(z) * ZOOM_STEP_SIZE;
+        self.min_x += f64::from(z) * ZOOM_STEP_SIZE;
+        self.min_y += f64::from(z) * ZOOM_STEP_SIZE / 2;
+        self.max_x -= f64::from(z) * ZOOM_STEP_SIZE;
+        self.max_y -= (f64::from(z) * ZOOM_STEP_SIZE / 2);
     }
 }
 
@@ -155,23 +162,27 @@ impl App {
     }
 
     fn pan_up(&mut self) -> Result<()> {
-        self.viewport.max_y += PAN_STEP_SIZE as f64;
-        self.viewport.min_y += PAN_STEP_SIZE as f64;
+        let step = PAN_STEP_SIZE.div(self.viewport.zoom_level) as f64;
+        self.viewport.max_y += step;
+        self.viewport.min_y += step;
         Ok(())
     }
     fn pan_left(&mut self) -> Result<()> {
-        self.viewport.max_x -= PAN_STEP_SIZE as f64;
-        self.viewport.min_x -= PAN_STEP_SIZE as f64;
+        let step = PAN_STEP_SIZE.div(self.viewport.zoom_level) as f64;
+        self.viewport.max_x -= step;
+        self.viewport.min_x -= step;
         Ok(())
     }
     fn pan_down(&mut self) -> Result<()> {
-        self.viewport.max_y -= PAN_STEP_SIZE as f64;
-        self.viewport.min_y -= PAN_STEP_SIZE as f64;
+        let step = PAN_STEP_SIZE.div(self.viewport.zoom_level) as f64;
+        self.viewport.max_y -= step;
+        self.viewport.min_y -= step;
         Ok(())
     }
     fn pan_right(&mut self) -> Result<()> {
-        self.viewport.max_x += PAN_STEP_SIZE as f64;
-        self.viewport.min_x += PAN_STEP_SIZE as f64;
+        let step = PAN_STEP_SIZE.div(self.viewport.zoom_level) as f64;
+        self.viewport.max_x += step;
+        self.viewport.min_x += step;
         Ok(())
     }
 }
@@ -207,6 +218,7 @@ impl Widget for &App {
                     resolution: map::WorldResolution::High,
                     color: ratatui::style::Color::Blue,
                 });
+                ctx.layer();
                 ctx.layer()
             });
 
